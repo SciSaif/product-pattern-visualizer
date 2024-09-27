@@ -1,6 +1,18 @@
 import { useRef, useEffect, useState } from 'react';
 import { useDrop } from 'react-dnd';
 import PatternSwatch from './PatternSwatch';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectLabel,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { Label } from './ui/label';
+import { Card } from './ui/card';
+import { blendPixels } from '@/utils';
 
 type ProductCustomizerProps = {
     productImage: string;
@@ -10,10 +22,9 @@ type ProductCustomizerProps = {
 const ProductCustomizer = ({ productImage, patterns }: ProductCustomizerProps) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const [selectedPattern, setSelectedPattern] = useState<string | null>(null);
-    const [patternSize, setPatternSize] = useState<number>(50); // Default pattern size
-    const [blendingMode, setBlendingMode] = useState<string>('screen');
+    const [patternSize, setPatternSize] = useState<number>(50);
+    const [blendingMode, setBlendingMode] = useState('screen');
 
-    // Function to resize canvas when the window resizes
     const resizeCanvas = () => {
         if (productImage && canvasRef.current) {
             const canvas = canvasRef.current;
@@ -21,36 +32,16 @@ const ProductCustomizer = ({ productImage, patterns }: ProductCustomizerProps) =
 
             const img = new Image();
             img.onload = () => {
-                const maxWidth = Math.min(800, window.innerWidth * 0.8); // Adjust maxWidth according to screen size
-                const maxHeight = 500; // Set your desired max height
+                const maxWidth = Math.min(800, window.innerWidth * 0.8);
+                const maxHeight = 500;
                 const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
 
                 canvas.width = img.width * ratio;
                 canvas.height = img.height * ratio;
-                ctx?.clearRect(0, 0, canvas.width, canvas.height); // Clear previous canvas content
-                ctx?.drawImage(img, 0, 0, canvas.width, canvas.height); // Draw the product image
+                ctx?.clearRect(0, 0, canvas.width, canvas.height);
+                ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
             };
             img.src = productImage;
-        }
-    };
-
-    useEffect(() => {
-        // Reset pattern when the product changes
-        setSelectedPattern(null);
-        resizeCanvas();
-    }, [productImage]);
-
-    const blendPixels = (src: number, dest: number, mode: string) => {
-        switch (mode) {
-            case 'screen':
-                return 255 - ((255 - src) * (255 - dest)) / 255;
-            case 'overlay':
-                return src < 128
-                    ? (src * dest * 2) / 255
-                    : 255 - (2 * (255 - src) * (255 - dest)) / 255;
-
-            default:
-                return (src + dest) / 2; // Normal blending
         }
     };
 
@@ -60,13 +51,11 @@ const ProductCustomizer = ({ productImage, patterns }: ProductCustomizerProps) =
 
         if (!ctx || !canvas) return;
 
-        // Redraw the product image to remove the old pattern
         const img = new Image();
         img.onload = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-            // Create a temporary canvas to generate the pattern
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
 
@@ -77,12 +66,10 @@ const ProductCustomizer = ({ productImage, patterns }: ProductCustomizerProps) =
             const pattern = new Image();
             pattern.onload = () => {
 
-                // Get the original dimensions of the pattern
                 const originalPatternWidth = pattern.width;
                 const originalPatternHeight = pattern.height;
 
-                // Set a base pattern size (e.g., 50px) and scale based on the original size
-                const basePatternSize = 300; // This will be your consistent pattern size
+                const basePatternSize = 300; // This will be the consistent pattern size
                 const scaleX = basePatternSize / originalPatternWidth;
                 const scaleY = basePatternSize / originalPatternHeight;
 
@@ -117,12 +104,6 @@ const ProductCustomizer = ({ productImage, patterns }: ProductCustomizerProps) =
         img.src = productImage;
     };
 
-    useEffect(() => {
-        if (selectedPattern) {
-            applyPattern(selectedPattern);
-        }
-    }, [blendingMode]);
-
     const [, drop] = useDrop({
         accept: 'pattern',
         drop: (item: { pattern: string }) => {
@@ -132,7 +113,7 @@ const ProductCustomizer = ({ productImage, patterns }: ProductCustomizerProps) =
     });
 
     const handlePatternSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setPatternSize(Number(e.target.value)); // Update pattern size as slider changes
+        setPatternSize(Number(e.target.value));
     };
 
     const handleMouseUp = () => {
@@ -142,11 +123,27 @@ const ProductCustomizer = ({ productImage, patterns }: ProductCustomizerProps) =
         }
     };
 
+    const handlePatternSelect = (pattern: string) => {
+        setSelectedPattern(pattern);
+        applyPattern(pattern);
+    };
+
+    useEffect(() => {
+        if (selectedPattern) {
+            applyPattern(selectedPattern);
+        }
+    }, [blendingMode]);
+
+    useEffect(() => {
+        setSelectedPattern(null);
+        resizeCanvas();
+    }, [productImage]);
+
     return (
         <div className="container max-w-4xl p-5 mx-auto">
             <div
-                className="flex flex-col items-start justify-around mt-5 lg:flex-row"
-                style={{ maxWidth: '1000px' }} // Set max width for the customizer
+                className="flex flex-col items-start justify-around gap-5 mt-5 lg:flex-row"
+                style={{ maxWidth: '1000px' }}
             >
                 <div>
 
@@ -158,44 +155,48 @@ const ProductCustomizer = ({ productImage, patterns }: ProductCustomizerProps) =
                         <canvas ref={canvasRef} />
 
                     </div>
-                    <div className="flex items-center mt-10 lg:mt-10 gap-x-5">
-                        <label htmlFor="blendingMode" className="mr-2">
-                            Blending Mode:
-                        </label>
-                        <select
-                            id="blendingMode"
-                            value={blendingMode}
-                            onChange={(e) => setBlendingMode(e.target.value)}
-                            className="p-2 border rounded-md"
-                        >
-                            <option value="screen">Screen</option>
-                            <option value="normal">Normal</option>
-                        </select>
-                    </div>
 
-                    <div className="mt-2">
-                        <label htmlFor="patternSize" className="mr-2">Pattern Size:</label>
+                </div>
+
+                <Card className="flex flex-col w-full gap-3 p-5 mt-10 sm:mt-0 sm:max-w-sm">
+                    <div>
+
+                        <Label htmlFor="blending-mode">Blending Mode</Label>
+                        <Select value={blendingMode} onValueChange={(value) => setBlendingMode(value)}>
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue id='blending-mode' placeholder="Blending Mode" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectLabel>Blending Mode</SelectLabel>
+                                    <SelectItem value="screen">Screen</SelectItem>
+                                    <SelectItem value="normal">Normal</SelectItem>
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="flex flex-col gap-1 pb-5 mt-2 border-b">
+                        <Label htmlFor="pattern-size">Pattern Size</Label>
+
                         <input
-                            id="patternSize"
+                            id="pattern-size"
                             type="range"
                             min="10"
                             max="200"
                             value={patternSize}
                             onChange={handlePatternSizeChange}
-                            onMouseUp={handleMouseUp} // Apply pattern after resizing
+                            onMouseUp={handleMouseUp}
+                            onTouchEnd={handleMouseUp}
                             className="w-full lg:w-auto"
                         />
                     </div>
-                </div>
-
-                <div className="max-w-sm p-5 mt-5 lg:mt-0">
-                    <h2 className="mb-2 text-xl font-semibold">Patterns</h2>
+                    <h2 className="text-lg font-semibold ">Patterns</h2>
                     <div className="flex flex-wrap gap-5">
                         {patterns.map((pattern) => (
-                            <PatternSwatch key={pattern} pattern={pattern} />
+                            <PatternSwatch key={pattern} pattern={pattern} onPatternSelect={handlePatternSelect} />
                         ))}
                     </div>
-                </div>
+                </Card>
             </div>
         </div>
     );
